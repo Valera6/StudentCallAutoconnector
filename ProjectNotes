@@ -1,0 +1,5 @@
+Working on the teams now.
+1) Change the time setting function in if __name__=='__main__'
+2) Make it so it works from the link, not searching for a call in groups
+
+# Will give an error if setting-up a call for the next year
