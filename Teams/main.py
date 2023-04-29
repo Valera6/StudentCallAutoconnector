@@ -168,6 +168,7 @@ def join_meeting(start_time=None):
                     close_participants.click()
                     print(f'DEBUG: closed participants')
                 print(f'DEBUG: moving mouse')"""
+                action = ActionChains(driver)
                 while True:
                     try:
                         time.sleep(0.3)
@@ -176,9 +177,8 @@ def join_meeting(start_time=None):
                             close_members.click()
                         except:
                             pass
-                        action = ActionChains(driver)
-                        action.move_to_element(members_element).perform()
                         hangup_btn = wait_until_found("#hangup-button")
+                        action.move_to_element(hangup_btn).perform()
                         hangup_btn.click()
                         print('DEBUG: Exited')
                         tg_msg('Звонок завершен')
