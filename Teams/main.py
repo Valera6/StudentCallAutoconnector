@@ -92,6 +92,7 @@ def initialize(start_time):
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--remote-debugging-port=9222")
     chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-gpu")
     if system == 'Linux':
         driver = webdriver.Chrome(options=chrome_options)
     else:
@@ -113,7 +114,7 @@ def join_meeting(start_time=None):
             continue_in_browser = wait_until_found('[data-tid="joinOnWeb"]', 30)
             if continue_in_browser is None:
                 print('DEBUG: Continue-in-browser button not found')
-                time.sleep(1000)
+                raise Exception('Continue-in-browser button not found')
 
             continue_in_browser.click()
             print('DEBUG: Continue-in-browser Button Clicked')
