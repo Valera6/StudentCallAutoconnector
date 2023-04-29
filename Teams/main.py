@@ -13,7 +13,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 
-driver: webdriver.Chrome = None
+#driver: webdriver.Chrome = None
 config = None
 active_meeting = None
 uuid_regex = r"\b[0-9a-f]{8}\b-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-\b[0-9a-f]{12}\b"
@@ -89,8 +89,11 @@ def initialize(start_time):
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--remote-debugging-port=9222")
     #chrome_options.add_argument("--no-sandbox")
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=chrome_options)
+    if system == 'Linux':
+        driver = webdriver.Chrome(options=chrome_options)
+    else:
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=chrome_options)
     #driver.maximize_window()
 
     return driver
