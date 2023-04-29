@@ -10,6 +10,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 
 driver: webdriver.Chrome = None
@@ -34,6 +35,7 @@ def load_config():
     except:
         with open('config.json', 'r') as f:
             config = json.load(f)
+load_config()
 
 def wait_until_found(sel, timeout=5, method=By.CSS_SELECTOR):
     try:
@@ -62,11 +64,7 @@ def move_mouse():
     actions.move_by_offset(x, y)
     actions.perform()
 
-
-def join_meeting(start_time=None):
-    global driver, config
-    load_config()
-
+def initialize(start_time):
     tz = pytz.timezone(config['timezone'])
     now = datetime.now(tz)
     run_at = datetime.fromisoformat(config['meetingtime']) if not start_time else start_time
@@ -91,121 +89,125 @@ def join_meeting(start_time=None):
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
     #driver.maximize_window()
-    
-    driver.get(config['link'])
 
-    # click continue in the driver
-    continue_in_browser = wait_until_found('[data-tid="joinOnWeb"]', 30)
-    if continue_in_browser is None:
-        print('DEBUG: Continue-in-browser button not found')
-        time.sleep(1000)
-
-    continue_in_browser.click()
-    print('DEBUG: Continue-in-browser Button Clicked')
-
-    # turn camera off
-    video_btn = wait_until_found("button.ts-toggle-button[track-name='1047']", 30)
-    time.sleep(7)
-    video_is_on = video_btn.get_attribute('aria-pressed')
-    if video_is_on == "true":
-        print('DEBUG: Video Turned Off')
-        video_btn.click()
-
-    # turn mic off
-    audio_btn = wait_until_found("button.ts-toggle-button[track-name='1048']", 5)
-    audio_is_on = audio_btn.get_attribute('aria-pressed')
-    if audio_is_on == "true":
-        print('DEBUG: Audio Turned Off')
-        audio_btn.click()
-
-    # enter guest name
-    guest_name_btn = wait_until_found("input[id=username]", 5)
-    if guest_name_btn is not None:
-        guest_name_btn.send_keys(config['guest_name'])
-        time.sleep(1)
-        print(f'DEBUG: entered guest name')
-
-    # final join button
-    join_now_btn = wait_until_found("button[data-tid='prejoin-join-button']", 30)
-    if join_now_btn is None:
-        print('DEBUG: Join now button not found')
-        return
-
-    #recheck that these things are dealt with and click join
-    audio_is_on = audio_btn.get_attribute('aria-pressed')
-    if audio_is_on == "true":
-        audio_btn.click()
-    video_is_on = video_btn.get_attribute('aria-pressed')
-    if video_is_on == "true":
-        video_btn.click()
-    video_is_on = video_btn.get_attribute('aria-pressed')
-    if video_is_on == "true":
-        print(f"DEBUG: couldn't turn off the camera. exiting")
-        return
-    else:
-        join_now_btn.click()
-        print(f'DEBUG: Successfuly connected')
-        tg_msg('Успешно присоединились к звонку. Отключение произойдет автоматически.')
-
-#TODO: if he wants to log in, we do so here
-#TODO: control paste the message on join
-
-    total_members = 1
-    while True:
-        time.sleep(5)
-        global members_count, members_element
+    return driver
+def join_meeting(start_time=None):
+    global driver, config, completion_status
+    driver = initialize(start_time)
+    completion_status = 400
+    i=0
+    while completion_status != 200 and i<10:
         try:
-            not_found = True
-            while not_found:
-                move_mouse()
+            driver.get(config['link'])
+
+            # click continue in the driver
+            continue_in_browser = wait_until_found('[data-tid="joinOnWeb"]', 30)
+            if continue_in_browser is None:
+                print('DEBUG: Continue-in-browser button not found')
+                time.sleep(1000)
+
+            continue_in_browser.click()
+            print('DEBUG: Continue-in-browser Button Clicked')
+
+            # turn camera off
+            video_btn = wait_until_found("button.ts-toggle-button[track-name='1047']", 30)
+            time.sleep(7)
+            video_is_on = video_btn.get_attribute('aria-pressed')
+            if video_is_on == "true":
+                print('DEBUG: Video Turned Off')
+                video_btn.click()
+
+            # turn mic off
+            audio_btn = wait_until_found("button.ts-toggle-button[track-name='1048']", 5)
+            audio_is_on = audio_btn.get_attribute('aria-pressed')
+            if audio_is_on == "true":
+                print('DEBUG: Audio Turned Off')
+                audio_btn.click()
+
+            # enter guest name
+            guest_name_btn = wait_until_found("input[id=username]", 5)
+            if guest_name_btn is not None:
+                guest_name_btn.send_keys(config['guest_name'])
+                time.sleep(1)
+                print(f'DEBUG: entered guest name')
+
+            # final join button
+            join_now_btn = wait_until_found("button[data-tid='prejoin-join-button']", 30)
+            if join_now_btn is None:
+                print('DEBUG: Join now button not found')
+                raise Exception
+
+            #recheck that these things are dealt with and click join
+            audio_is_on = audio_btn.get_attribute('aria-pressed')
+            if audio_is_on == "true":
+                audio_btn.click()
+            video_is_on = video_btn.get_attribute('aria-pressed')
+            if video_is_on == "true":
+                video_btn.click()
+            video_is_on = video_btn.get_attribute('aria-pressed')
+            if video_is_on == "true":
+                print(f"DEBUG: couldn't turn off the camera. exiting")
+                raise Exception
+            else:
+                join_now_btn.click()
+                print(f'DEBUG: Successfuly connected')
+                tg_msg('Успешно присоединились к звонку. Отключение произойдет автоматически.')
+
+            #TODO: if he wants to log in, we do so here
+            #TODO: control paste the message on join
+
+            total_members = 1
+            while True:
+                time.sleep(5)
+                global members_count, members_element
                 try:
-                    element = wait_until_found("#page-content-wrapper > div.flex-fill > div > calling-screen > div > div.ts-calling-screen.flex-fill.call-connected.PERSISTENT.GRID.passive-bar-available.has-meeting-info.closed-captions-hidden.trigger-overlap.show-roster.has-panel.immersive > meeting-panel-components > calling-roster > div > div.scroll-container.flex-fill > div > div.scrolling-pane > accordion > div > accordion-section:nth-child(1) > div > calling-roster-section > div > div.roster-list-title-group.has-roster-limit > button")
-                    aria_label = element.get_attribute('aria-label')
-                    members_count = int(aria_label.split(' ')[-1])
-                    not_found = False
-                except:
-                    members_element = wait_until_found("#roster-button")
-                    action = ActionChains(driver)
-                    action.move_to_element(members_element).perform()
-                    members_element.click()
+                    found, i = False, 0
+                    while (not found) and i<4:
+                        try:
+                            element = wait_until_found("#page-content-wrapper > div.flex-fill > div > calling-screen > div > div.ts-calling-screen.flex-fill.call-connected.PERSISTENT.GRID.passive-bar-available.has-meeting-info.closed-captions-hidden.trigger-overlap.show-roster.has-panel.immersive > meeting-panel-components > calling-roster > div > div.scroll-container.flex-fill > div > div.scrolling-pane > accordion > div > accordion-section:nth-child(1) > div > calling-roster-section > div > div.roster-list-title-group.has-roster-limit > button")
+                            aria_label = element.get_attribute('aria-label')
+                            members_count = int(aria_label.split(' ')[-1])
+                            found = True
+                        except:
+                            members_element = wait_until_found("#roster-button")
+                            driver.execute_script("arguments[0].click();", members_element)
 
-                    element = wait_until_found("#page-content-wrapper > div.flex-fill > div > calling-screen > div > div.ts-calling-screen.flex-fill.call-connected.PERSISTENT.GRID.passive-bar-available.has-meeting-info.closed-captions-hidden.trigger-overlap.show-roster.has-panel.immersive > meeting-panel-components > calling-roster > div > div.scroll-container.flex-fill > div > div.scrolling-pane > accordion > div > accordion-section:nth-child(1) > div > calling-roster-section > div > div.roster-list-title-group.has-roster-limit > button")
-                    aria_label = element.get_attribute('aria-label')
-                    members_count = int(aria_label.split(' ')[-1])
-                    not_found = False
+                            element = wait_until_found("#page-content-wrapper > div.flex-fill > div > calling-screen > div > div.ts-calling-screen.flex-fill.call-connected.PERSISTENT.GRID.passive-bar-available.has-meeting-info.closed-captions-hidden.trigger-overlap.show-roster.has-panel.immersive > meeting-panel-components > calling-roster > div > div.scroll-container.flex-fill > div > div.scrolling-pane > accordion > div > accordion-section:nth-child(1) > div > calling-roster-section > div > div.roster-list-title-group.has-roster-limit > button")
+                            aria_label = element.get_attribute('aria-label')
+                            members_count = int(aria_label.split(' ')[-1])
+                            found = True
 
-                time.sleep(0.15)
-            print(f"DEBUG: members_count: {members_count}")
+                        time.sleep(0.15)
+                    print(f"DEBUG: members_count: {members_count}, {time.time()}")
 
-            if (members_count/total_members) * 100 < int(config['leave_percentage']):
-                # hangup button
-                print('DEBUG: Exiting Meeting...')
-                close_participants = wait_until_found("svg.app-svg.icons-close", 5)
-                ##page-content-wrapper > div.flex-fill > div > calling-screen > div > div.ts-calling-screen.flex-fill.call-connected.PERSISTENT.GRID.passive-bar-available.has-meeting-info.closed-captions-hidden.show-roster.has-panel.trigger-overlap.pip-expanded.show-myself-preview.immersive > meeting-panel-components > calling-roster > div > right-pane-header > div > div > button
-                if close_participants != None:
-                    close_participants.click()
-                    print(f'DEBUG: closed participants')
-                print(f'DEBUG: moving mouse')
-                action = ActionChains(driver)
-                while True:
-                    try:
-                        time.sleep(0.1)
+                    if (members_count/total_members) * 100 < int(config['leave_percentage']):
+                        print('DEBUG: Exiting Meeting...')
+                        close_participants = wait_until_found("svg.app-svg.icons-close", 5)
+                        if close_participants is not None:
+                            try:
+                                close_participants.click()
+                            except:
+                                driver.execute_script("arguments[0].click();", close_participants)
+                            print(f'DEBUG: closed participants')
+
                         hangup_btn = wait_until_found("#hangup-button")
-                        action.move_to_element(hangup_btn).perform()
-                        hangup_btn.click()
+                        driver.execute_script("arguments[0].click();", hangup_btn)
                         print('DEBUG: Exited')
                         tg_msg('Звонок завершен')
                         driver.quit()
+                        completion_status = 200
                         break
-                    except:
-                        move_mouse()
-                break
 
-            if members_count and members_count > total_members:
-                total_members = members_count
-                print(f"DEBUG: new peak in users: {members_count}")
+                    if members_count and members_count > total_members:
+                        total_members = members_count #*4 # debugging - will make it hang up immediately after first getting the value
+                        print(f"DEBUG: new peak in users: {members_count}")
+                except:
+                    pass
         except:
-            pass
+            print(f"DEBUG: couldn't connect. Retrying.")
+            i+= 1
+    if not completion_status == 200:
+        tg_msg('!!!Не смогли подключиться к звонку. Завершаем сессию.')
 
 def log_in():
     global driver, config
@@ -271,5 +273,5 @@ def log_in():
         #driver.quit()
     
 if __name__ == "__main__":
-    start_time = datetime.now() + timedelta(seconds=2, hours=3)
+    start_time = datetime.now() + timedelta(seconds=3, hours=3)
     join_meeting(start_time=start_time)
