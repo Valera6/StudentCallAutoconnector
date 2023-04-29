@@ -1,4 +1,4 @@
-﻿import json, time, pytz, pdb
+﻿import json, time, pytz, pdb, random
 from threading import Timer
 from datetime import datetime, timedelta
 
@@ -51,6 +51,16 @@ def switch_to_teams_tab():
     teams_button = wait_until_found("button.app-bar-link > ng-include > svg.icons-teams", 5)
     if teams_button is not None:
         teams_button.click()
+def move_mouse():
+    width = driver.execute_script("return Math.max(document.body.scrollWidth, document.body.offsetWidth, document.documentElement.clientWidth, document.documentElement.scrollWidth, document.documentElement.offsetWidth);")
+    height = driver.execute_script("return Math.max(document.body.scrollHeight, document.body.offsetHeight, document.documentElement.clientHeight, document.documentElement.scrollHeight, document.documentElement.offsetHeight);")
+
+    x = random.randint(0, width)
+    y = random.randint(0, height)
+
+    actions = ActionChains(driver)
+    actions.move_by_offset(x, y)
+    actions.perform()
 
 
 def join_meeting(start_time=None):
@@ -145,38 +155,41 @@ def join_meeting(start_time=None):
         time.sleep(5)
         global members_count, members_element
         try:
-            try:
-                element = wait_until_found("#page-content-wrapper > div.flex-fill > div > calling-screen > div > div.ts-calling-screen.flex-fill.call-connected.PERSISTENT.GRID.passive-bar-available.has-meeting-info.closed-captions-hidden.trigger-overlap.show-roster.has-panel.immersive > meeting-panel-components > calling-roster > div > div.scroll-container.flex-fill > div > div.scrolling-pane > accordion > div > accordion-section:nth-child(1) > div > calling-roster-section > div > div.roster-list-title-group.has-roster-limit > button")
-                aria_label = element.get_attribute('aria-label')
-                members_count = int(aria_label.split(' ')[-1])
-            except:
-                members_element = wait_until_found("#roster-button")
-                action = ActionChains(driver)
-                action.move_to_element(members_element).perform()
-                members_element.click()
+            not_found = True
+            while not_found:
+                move_mouse()
+                try:
+                    element = wait_until_found("#page-content-wrapper > div.flex-fill > div > calling-screen > div > div.ts-calling-screen.flex-fill.call-connected.PERSISTENT.GRID.passive-bar-available.has-meeting-info.closed-captions-hidden.trigger-overlap.show-roster.has-panel.immersive > meeting-panel-components > calling-roster > div > div.scroll-container.flex-fill > div > div.scrolling-pane > accordion > div > accordion-section:nth-child(1) > div > calling-roster-section > div > div.roster-list-title-group.has-roster-limit > button")
+                    aria_label = element.get_attribute('aria-label')
+                    members_count = int(aria_label.split(' ')[-1])
+                    not_found = False
+                except:
+                    members_element = wait_until_found("#roster-button")
+                    action = ActionChains(driver)
+                    action.move_to_element(members_element).perform()
+                    members_element.click()
 
-                element = wait_until_found("#page-content-wrapper > div.flex-fill > div > calling-screen > div > div.ts-calling-screen.flex-fill.call-connected.PERSISTENT.GRID.passive-bar-available.has-meeting-info.closed-captions-hidden.trigger-overlap.show-roster.has-panel.immersive > meeting-panel-components > calling-roster > div > div.scroll-container.flex-fill > div > div.scrolling-pane > accordion > div > accordion-section:nth-child(1) > div > calling-roster-section > div > div.roster-list-title-group.has-roster-limit > button")
-                aria_label = element.get_attribute('aria-label')
-                members_count = int(aria_label.split(' ')[-1])
+                    element = wait_until_found("#page-content-wrapper > div.flex-fill > div > calling-screen > div > div.ts-calling-screen.flex-fill.call-connected.PERSISTENT.GRID.passive-bar-available.has-meeting-info.closed-captions-hidden.trigger-overlap.show-roster.has-panel.immersive > meeting-panel-components > calling-roster > div > div.scroll-container.flex-fill > div > div.scrolling-pane > accordion > div > accordion-section:nth-child(1) > div > calling-roster-section > div > div.roster-list-title-group.has-roster-limit > button")
+                    aria_label = element.get_attribute('aria-label')
+                    members_count = int(aria_label.split(' ')[-1])
+                    not_found = False
+
+                time.sleep(0.15)
+            print(f"DEBUG: members_count: {members_count}")
 
             if (members_count/total_members) * 100 < int(config['leave_percentage']):
                 # hangup button
                 print('DEBUG: Exiting Meeting...')
-                """close_participants = wait_until_found("svg.app-svg.icons-close", 5)
+                close_participants = wait_until_found("svg.app-svg.icons-close", 5)
                 ##page-content-wrapper > div.flex-fill > div > calling-screen > div > div.ts-calling-screen.flex-fill.call-connected.PERSISTENT.GRID.passive-bar-available.has-meeting-info.closed-captions-hidden.show-roster.has-panel.trigger-overlap.pip-expanded.show-myself-preview.immersive > meeting-panel-components > calling-roster > div > right-pane-header > div > div > button
                 if close_participants != None:
                     close_participants.click()
                     print(f'DEBUG: closed participants')
-                print(f'DEBUG: moving mouse')"""
+                print(f'DEBUG: moving mouse')
                 action = ActionChains(driver)
                 while True:
                     try:
-                        time.sleep(0.3)
-                        try:
-                            close_members = wait_until_found("#page-content-wrapper > div.flex-fill > div > calling-screen > div > div.ts-calling-screen.flex-fill.call-connected.PERSISTENT.GRID.passive-bar-available.has-meeting-info.closed-captions-hidden.pip-expanded.show-myself-preview.shift-up.show-roster.has-panel.trigger-overlap > meeting-panel-components > calling-roster > div > right-pane-header > div > div > button")
-                            close_members.click()
-                        except:
-                            pass
+                        time.sleep(0.1)
                         hangup_btn = wait_until_found("#hangup-button")
                         action.move_to_element(hangup_btn).perform()
                         hangup_btn.click()
@@ -185,7 +198,7 @@ def join_meeting(start_time=None):
                         driver.quit()
                         break
                     except:
-                        pass
+                        move_mouse()
                 break
 
             if members_count and members_count > total_members:
