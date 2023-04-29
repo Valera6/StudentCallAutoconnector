@@ -1,4 +1,4 @@
-﻿import json, time, pytz, pdb, random
+﻿import json, time, pytz, pdb, random, platform
 from threading import Timer
 from datetime import datetime, timedelta
 
@@ -78,7 +78,10 @@ def initialize(start_time):
     time.sleep(start_delay)
 
     chrome_options = webdriver.ChromeOptions()
-    chrome_options.add_argument('--ignore-certificate-errors')
+    system = platform.system()
+    if system == 'Linux':
+        chrome_options.binary_location = "/usr/bin/google-chrome-stable"
+        chrome_options.add_argument('--ignore-certificate-errors')
     chrome_options.add_argument('--ignore-ssl-errors')
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
     chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
