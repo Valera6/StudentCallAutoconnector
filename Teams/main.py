@@ -67,8 +67,11 @@ def move_mouse():
 def initialize(start_time):
     tz = pytz.timezone(config['timezone'])
     now = datetime.now(tz)
-    run_at = datetime.fromisoformat(config['meetingtime']) if not start_time else start_time
-    run_at = tz.localize(run_at)
+    if not start_time:
+        run_at = datetime.fromisoformat(config['meetingtime'])
+        run_at = tz.localize(run_at)
+    else:
+        run_at = start_time # for when debugging. already comes localized.
     if run_at < now:
         tg_msg('Выбранное время уже прошло. Проверьте время начала и запустите бота заново')
         raise Exception ('Chosen time is out of bounds')
@@ -88,7 +91,7 @@ def initialize(start_time):
     chrome_options.add_argument('--headless')
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--remote-debugging-port=9222")
-    #chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--no-sandbox")
     if system == 'Linux':
         driver = webdriver.Chrome(options=chrome_options)
     else:
@@ -279,5 +282,6 @@ def log_in():
         #driver.quit()
     
 if __name__ == "__main__":
-    start_time = datetime.now() + timedelta(seconds=3, hours=0)
+    tz = pytz.timezone('Europe/Moscow')
+    start_time = datetime.now(tz) + timedelta(seconds=3)
     join_meeting(start_time=start_time)
