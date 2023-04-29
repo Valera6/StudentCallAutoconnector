@@ -11,7 +11,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+
 from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.firefox import GeckoDriverManager
 
 #driver: webdriver.Chrome = None
 config = None
@@ -64,6 +66,43 @@ def move_mouse():
     actions.move_by_offset(x, y)
     actions.perform()
 
+def use_chrome():
+    chrome_options = webdriver.ChromeOptions()
+    system = platform.system()
+    if system == 'Linux':
+        chrome_options.binary_location = "/usr/bin/google-chrome-stable"
+        chrome_options.add_argument('--ignore-certificate-errors')
+    chrome_options.add_argument('--ignore-ssl-errors')
+    chrome_options.add_argument("--use-fake-ui-for-media-stream")
+    chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+    chrome_options.add_argument('--headless')
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--remote-debugging-port=9222")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-gpu")
+    
+    if system == 'Linux':
+        driver = webdriver.Chrome(options=chrome_options)
+    else:
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+    #driver.maximize_window()
+
+    return driver
+def use_firefox():
+    firefox_options = webdriver.FirefoxOptions()
+    system = platform.system()
+    if system == 'Linux':
+        firefox_options.add_argument('--ignore-certificate-errors')
+    firefox_options.add_argument('--ignore-ssl-errors')
+    firefox_options.add_argument("--use-fake-ui-for-media-stream")
+    #firefox_options.add_argument('--headless')
+    firefox_options.add_argument("--disable-dev-shm-usage")
+    #firefox_options.add_argument("--no-sandbox")
+    #firefox_options.add_argument("--disable-gpu")
+
+    driver = webdriver.Firefox(executable_path=GeckoDriverManager().install(), options=firefox_options)
+    return driver
 def initialize(start_time):
     tz = pytz.timezone(config['timezone'])
     now = datetime.now(tz)
@@ -80,27 +119,7 @@ def initialize(start_time):
     print(f"DEBUG: Waiting until {run_at} ({int(start_delay)}s)")
     time.sleep(start_delay)
 
-    chrome_options = webdriver.ChromeOptions()
-    system = platform.system()
-    if system == 'Linux':
-        chrome_options.binary_location = "/usr/bin/google-chrome-stable"
-        chrome_options.add_argument('--ignore-certificate-errors')
-    chrome_options.add_argument('--ignore-ssl-errors')
-    chrome_options.add_argument("--use-fake-ui-for-media-stream")
-    chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--remote-debugging-port=9222")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-gpu")
-    if system == 'Linux':
-        driver = webdriver.Chrome(options=chrome_options)
-    else:
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=chrome_options)
-    #driver.maximize_window()
-
-    return driver
+    return use_chrome() # firefox is not supported for Teams...
 def join_meeting(start_time=None):
     global driver, config, completion_status
     driver = initialize(start_time)
