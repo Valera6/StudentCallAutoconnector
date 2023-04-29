@@ -61,13 +61,13 @@ class Platform():
     #<initiation>
     def start(self):
         bot.send_message(chat_id=self.chat_id,
-            text=f'В какое время вы хотите подключиться к звонку? ({self.timezone}, пример: "04-08 18:31")')
+            text=f'В какое время вы хотите подключиться к звонку? ({self.timezone}, пример: "13-04 18:31")')
         global current_function
         current_function = self.set_time
     def set_time(self, msg):
         try:
             time = datetime.now()
-            new = datetime.strptime(msg.text, '%m-%d %H:%M')
+            new = datetime.strptime(msg.text, '%d-%m %H:%M')
             self.time = new.replace(year=time.year)
 
             bot.send_message(chat_id=msg.chat.id,
@@ -76,7 +76,7 @@ class Platform():
             current_function = self.receive_link
         except:
             bot.send_message(chat_id=self.chat_id,
-                                text='Ошибка в выставлении даты. Проверьте, что ваше сообщение выглядит так: "mm-dd HH:MM" пример: 11-18 09:31')
+                                text='Ошибка в выставлении даты. Проверьте, что ваше сообщение выглядит так: "dd-mm HH:MM" пример: 18-11 09:31')
     def receive_link(self, msg):
         self.link = msg.text.strip()
 
