@@ -273,5 +273,5 @@ def log_in():
         #driver.quit()
     
 if __name__ == "__main__":
-    start_time = datetime.now() + timedelta(seconds=6, hours=3)
+    start_time = datetime.now() + timedelta(seconds=3, hours=0)
     join_meeting(start_time=start_time)
