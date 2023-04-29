@@ -1,6 +1,7 @@
 ﻿import json, time, pytz, pdb, random, platform
 from threading import Timer
 from datetime import datetime, timedelta
+from io import BytesIO
 
 from selenium import webdriver
 from selenium.common import exceptions
@@ -21,13 +22,16 @@ active_meeting = None
 uuid_regex = r"\b[0-9a-f]{8}\b-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-\b[0-9a-f]{12}\b"
 hangup_thread: Timer = None
 
-#<send tg msg>
+#<tg>
 import telebot
 API_KEY = '5873490198:AAEF0SjUqUyiLyc_LkSkY7DltGu0VEI652I'
 tb = telebot.TeleBot(API_KEY, False)
 def tg_msg(msg):
     tb.send_message(config['chat_id'], msg)
-#</send tg msg>
+def tg_img(directory):
+    with open(directory, "rb") as img:
+        tb.send_photo(config['chat_id'], img)
+#</tg>
 
 def load_config():
     global config
@@ -39,12 +43,18 @@ def load_config():
             config = json.load(f)
 load_config()
 
-def wait_until_found(sel, timeout=5, method=By.CSS_SELECTOR):
+def wait_until_found(sel, timeout=5, method=By.CSS_SELECTOR, take_screenshot=False):
+    global driver
+    if take_screenshot:
+        timeout = 2
     try:
         element = WebDriverWait(driver, timeout).until(EC.presence_of_element_located((method, sel)))
         return element
     except exceptions.TimeoutException:
         print(f"Timeout waiting for element with sel: {sel}")
+        if take_screenshot:
+            driver.save_screenshot('screenshot.png')
+            tg_img('screenshot.png')
         return None
 
 def junk_popups():
@@ -130,7 +140,7 @@ def join_meeting(start_time=None):
             driver.get(config['link'])
 
             # click continue in the driver
-            continue_in_browser = wait_until_found('[data-tid="joinOnWeb"]', 30)
+            continue_in_browser = wait_until_found('[data-tid="joinOnWeb"]', 30, take_screenshot=True)
             if continue_in_browser is None:
                 print('DEBUG: Continue-in-browser button not found')
                 raise Exception('Continue-in-browser button not found')
