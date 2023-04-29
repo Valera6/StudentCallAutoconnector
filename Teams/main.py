@@ -15,6 +15,8 @@ from selenium.webdriver.chrome.options import Options
 
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.firefox import GeckoDriverManager
+from selenium.webdriver import Edge, EdgeOptions
+from webdriver_manager.microsoft import EdgeChromiumDriverManager
 
 #driver: webdriver.Chrome = None
 config = None
@@ -99,6 +101,22 @@ def use_chrome():
     #driver.maximize_window()
 
     return driver
+
+def use_edge():
+    edge_options = EdgeOptions()
+    edge_options.add_argument('--ignore-ssl-errors')
+    edge_options.add_argument("--use-fake-ui-for-media-stream")
+    edge_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+    edge_options.add_argument("--disable-dev-shm-usage")
+    #edge_options.add_argument('--headless')
+    #edge_options.add_argument("--remote-debugging-port=9222")
+    #edge_options.add_argument("--no-sandbox")
+    #edge_options.add_argument("--disable-gpu")
+
+    driver = Edge(executable_path=EdgeChromiumDriverManager().install(), options=edge_options)
+    return driver
+
+
 def use_firefox():
     firefox_options = webdriver.FirefoxOptions()
     system = platform.system()
@@ -129,7 +147,7 @@ def initialize(start_time):
     print(f"DEBUG: Waiting until {run_at} ({int(start_delay)}s)")
     time.sleep(start_delay)
 
-    return use_chrome() # firefox is not supported for Teams...
+    return use_edge() # firefox is not supported for Teams...
 def join_meeting(start_time=None):
     global driver, config, completion_status
     driver = initialize(start_time)
@@ -140,7 +158,7 @@ def join_meeting(start_time=None):
             driver.get(config['link'])
 
             # click continue in the driver
-            continue_in_browser = wait_until_found('[data-tid="joinOnWeb"]', 30, take_screenshot=True)
+            continue_in_browser = wait_until_found('[data-tid="joinOnWeb"]', 30)
             if continue_in_browser is None:
                 print('DEBUG: Continue-in-browser button not found')
                 raise Exception('Continue-in-browser button not found')
