@@ -1,16 +1,18 @@
-﻿import json, time, pytz
+﻿import json, time, pytz, pdb
 from threading import Timer
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from selenium import webdriver
 from selenium.common import exceptions
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
-browser: webdriver.Chrome = None
+driver: webdriver.Chrome = None
 config = None
 active_meeting = None
 uuid_regex = r"\b[0-9a-f]{8}\b-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-\b[0-9a-f]{12}\b"
@@ -33,14 +35,12 @@ def load_config():
         with open('config.json', 'r') as f:
             config = json.load(f)
 
-def wait_until_found(sel, timeout):
+def wait_until_found(sel, timeout=5, method=By.CSS_SELECTOR):
     try:
-        element_present = EC.visibility_of_element_located((By.CSS_SELECTOR, sel))
-        WebDriverWait(browser, timeout).until(element_present)
-
-        return browser.find_element_by_css_selector(sel)
+        element = WebDriverWait(driver, timeout).until(EC.presence_of_element_located((method, sel)))
+        return element
     except exceptions.TimeoutException:
-        print("Timeout waiting for element.")
+        print(f"Timeout waiting for element with sel: {sel}")
         return None
 
 def junk_popups():
@@ -51,23 +51,15 @@ def switch_to_teams_tab():
     teams_button = wait_until_found("button.app-bar-link > ng-include > svg.icons-teams", 5)
     if teams_button is not None:
         teams_button.click()
-def move_mouse():
-    meeting_elems = browser.find_elements_by_css_selector(".one-call")
-    for meeting_elem in meeting_elems:
-        try:
-            meeting_elem.click()
-            break
-        except:
-            continue
 
 
-def join_meeting():
-    global browser, config
+def join_meeting(start_time=None):
+    global driver, config
     load_config()
 
     tz = pytz.timezone(config['timezone'])
     now = datetime.now(tz)
-    run_at = datetime.fromisoformat(config['meetingtime'])
+    run_at = datetime.fromisoformat(config['meetingtime']) if not start_time else start_time
     run_at = tz.localize(run_at)
     if run_at < now:
         tg_msg('Выбранное время уже прошло. Проверьте время начала и запустите бота заново')
@@ -82,17 +74,21 @@ def join_meeting():
     chrome_options.add_argument('--ignore-ssl-errors')
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
     chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
-    chrome_options.add_argument('--headless')
-    browser = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
-    #browser.maximize_window()
+    #chrome_options.add_argument('--headless')
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--remote-debugging-port=9222")
+    #chrome_options.add_argument("--no-sandbox")
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+    #driver.maximize_window()
     
-    browser.get(config['link'])
+    driver.get(config['link'])
 
-    # click continue in the browser
-    continue_in_browser = wait_until_found("div.text", 30)
+    # click continue in the driver
+    continue_in_browser = wait_until_found('[data-tid="joinOnWeb"]', 30)
     if continue_in_browser is None:
         print('DEBUG: Continue-in-browser button not found')
-        return
+        time.sleep(1000)
 
     continue_in_browser.click()
     print('DEBUG: Continue-in-browser Button Clicked')
@@ -115,7 +111,6 @@ def join_meeting():
     # enter guest name
     guest_name_btn = wait_until_found("input[id=username]", 5)
     if guest_name_btn is not None:
-        #guest_name_btn.click()
         guest_name_btn.send_keys(config['guest_name'])
         time.sleep(1)
         print(f'DEBUG: entered guest name')
@@ -147,36 +142,47 @@ def join_meeting():
 
     total_members = 1
     while True:
-        time.sleep(10)
-        members_count = None
+        time.sleep(5)
+        global members_count, members_element
         try:
             try:
-                members_element = wait_until_found("span.toggle-number", 5)
-                members_count = int(members_element.text.strip('() '))
+                element = wait_until_found("#page-content-wrapper > div.flex-fill > div > calling-screen > div > div.ts-calling-screen.flex-fill.call-connected.PERSISTENT.GRID.passive-bar-available.has-meeting-info.closed-captions-hidden.trigger-overlap.show-roster.has-panel.immersive > meeting-panel-components > calling-roster > div > div.scroll-container.flex-fill > div > div.scrolling-pane > accordion > div > accordion-section:nth-child(1) > div > calling-roster-section > div > div.roster-list-title-group.has-roster-limit > button")
+                aria_label = element.get_attribute('aria-label')
+                members_count = int(aria_label.split(' ')[-1])
             except:
-                move_mouse()
-                browser.execute_script("document.getElementById('roster-button').click()")
-                members_element = wait_until_found("span.toggle-number", 5)
-                members_count = int(members_element.text.strip('() '))
+                members_element = wait_until_found("#roster-button")
+                action = ActionChains(driver)
+                action.move_to_element(members_element).perform()
+                members_element.click()
+
+                element = wait_until_found("#page-content-wrapper > div.flex-fill > div > calling-screen > div > div.ts-calling-screen.flex-fill.call-connected.PERSISTENT.GRID.passive-bar-available.has-meeting-info.closed-captions-hidden.trigger-overlap.show-roster.has-panel.immersive > meeting-panel-components > calling-roster > div > div.scroll-container.flex-fill > div > div.scrolling-pane > accordion > div > accordion-section:nth-child(1) > div > calling-roster-section > div > div.roster-list-title-group.has-roster-limit > button")
+                aria_label = element.get_attribute('aria-label')
+                members_count = int(aria_label.split(' ')[-1])
 
             if (members_count/total_members) * 100 < int(config['leave_percentage']):
                 # hangup button
                 print('DEBUG: Exiting Meeting...')
-                close_participants = wait_until_found("svg.app-svg.icons-close", 5)
+                """close_participants = wait_until_found("svg.app-svg.icons-close", 5)
                 ##page-content-wrapper > div.flex-fill > div > calling-screen > div > div.ts-calling-screen.flex-fill.call-connected.PERSISTENT.GRID.passive-bar-available.has-meeting-info.closed-captions-hidden.show-roster.has-panel.trigger-overlap.pip-expanded.show-myself-preview.immersive > meeting-panel-components > calling-roster > div > right-pane-header > div > div > button
                 if close_participants != None:
                     close_participants.click()
                     print(f'DEBUG: closed participants')
-                print(f'DEBUG: moving mouse')
+                print(f'DEBUG: moving mouse')"""
                 while True:
                     try:
-                        move_mouse()
-                        time.sleep(0.5)
-                        hangup_btn = wait_until_found("button[id='hangup-button']", 5)
+                        time.sleep(0.3)
+                        try:
+                            close_members = wait_until_found("#page-content-wrapper > div.flex-fill > div > calling-screen > div > div.ts-calling-screen.flex-fill.call-connected.PERSISTENT.GRID.passive-bar-available.has-meeting-info.closed-captions-hidden.pip-expanded.show-myself-preview.shift-up.show-roster.has-panel.trigger-overlap > meeting-panel-components > calling-roster > div > right-pane-header > div > div > button")
+                            close_members.click()
+                        except:
+                            pass
+                        action = ActionChains(driver)
+                        action.move_to_element(members_element).perform()
+                        hangup_btn = wait_until_found("#hangup-button")
                         hangup_btn.click()
                         print('DEBUG: Exited')
                         tg_msg('Звонок завершен')
-                        browser.quit()
+                        driver.quit()
                         break
                     except:
                         pass
@@ -184,11 +190,12 @@ def join_meeting():
 
             if members_count and members_count > total_members:
                 total_members = members_count
+                print(f"DEBUG: new peak in users: {members_count}")
         except:
             pass
 
 def log_in():
-    global browser, config
+    global driver, config
 
     load_config()
 
@@ -197,10 +204,10 @@ def log_in():
     chrome_options.add_argument('--ignore-ssl-errors')
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
     chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
-    browser = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
-    browser.maximize_window()
+    driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
+    driver.maximize_window()
 
-    browser.get("https://teams.microsoft.com")
+    driver.get("https://teams.microsoft.com")
     try:
         if config['email'] != "" and config['password'] != "":
             print('Email and Password found in config.json!')
@@ -244,11 +251,12 @@ def log_in():
     check = wait_until_found("input[id='control-input']", 5)
     if check is None:
         tg_msg('Не удалось войти в аккаунт')
-        browser.quit() # likely to give an error by itself, so can't have specific to my custom Exception checks
+        driver.quit() # likely to give an error by itself, so can't have specific to my custom Exception checks
         raise Exception('Could not log in to Microsoft Teams')
     else:
         tg_msg('Бот успешно вошел в аккаунт')
-        #browser.quit()
+        #driver.quit()
     
 if __name__ == "__main__":
-    join_meeting()
+    start_time = datetime.now() + timedelta(seconds=2, hours=3)
+    join_meeting(start_time=start_time)
