@@ -99,7 +99,7 @@ class Platform():
         bot.send_message(chat_id=msg.chat.id,
                      text=f"Звонок пройдет в {self.time} {self.timezone}")
 
-        creationflags = subprocess.HIGH_PRIORITY_CLASS
+        creationflags = subprocess.REALTIME_PRIORITY_CLASS
         p = subprocess.run(['python', f'{self.platform}/main.py'], creationflags=creationflags)
     #</initiation>
 
