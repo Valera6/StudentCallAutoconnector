@@ -59,15 +59,6 @@ def wait_until_found(sel, timeout=5, method=By.CSS_SELECTOR, take_screenshot=Fal
             tg_img('screenshot.png')
         return None
 
-def junk_popups():
-    #engagement-surface-dialog > div > div > div.ts-modal-dialog-footer > div > div:nth-child(1) > button
-    #ts-btn ts-btn-fluent ts-btn-fluent-secondary
-    pass
-def switch_to_teams_tab():
-    teams_button = wait_until_found("button.app-bar-link > ng-include > svg.icons-teams", 5)
-    if teams_button is not None:
-        teams_button.click()
-
 def use_chrome():
     chrome_options = webdriver.ChromeOptions()
     system = platform.system()
