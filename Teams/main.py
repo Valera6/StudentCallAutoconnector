@@ -67,16 +67,6 @@ def switch_to_teams_tab():
     teams_button = wait_until_found("button.app-bar-link > ng-include > svg.icons-teams", 5)
     if teams_button is not None:
         teams_button.click()
-def move_mouse():
-    width = driver.execute_script("return Math.max(document.body.scrollWidth, document.body.offsetWidth, document.documentElement.clientWidth, document.documentElement.scrollWidth, document.documentElement.offsetWidth);")
-    height = driver.execute_script("return Math.max(document.body.scrollHeight, document.body.offsetHeight, document.documentElement.clientHeight, document.documentElement.scrollHeight, document.documentElement.offsetHeight);")
-
-    x = random.randint(0, width)
-    y = random.randint(0, height)
-
-    actions = ActionChains(driver)
-    actions.move_by_offset(x, y)
-    actions.perform()
 
 def use_chrome():
     chrome_options = webdriver.ChromeOptions()
