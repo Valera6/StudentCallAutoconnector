@@ -156,14 +156,14 @@ def join_meeting(start_time=None):
                 video_btn.click()
 
             # turn mic off
-            audio_btn = wait_until_found("button.ts-toggle-button[track-name='1048']", 5)
+            audio_btn = wait_until_found("button.ts-toggle-button[track-name='1048']")
             audio_is_on = audio_btn.get_attribute('aria-pressed')
             if audio_is_on == "true":
                 print('DEBUG: Audio Turned Off')
                 audio_btn.click()
 
             # enter guest name
-            guest_name_btn = wait_until_found("input[id=username]", 5)
+            guest_name_btn = wait_until_found("input[id=username]"
             if guest_name_btn is not None:
                 guest_name_btn.send_keys(config['guest_name'])
                 time.sleep(1)
@@ -220,7 +220,7 @@ def join_meeting(start_time=None):
 
                     if (members_count/total_members) * 100 < int(config['leave_percentage']):
                         print('DEBUG: Exiting Meeting...')
-                        close_participants = wait_until_found("svg.app-svg.icons-close", 5)
+                        close_participants = wait_until_found("svg.app-svg.icons-close")
                         if close_participants is not None:
                             try:
                                 close_participants.click()

@@ -52,7 +52,7 @@ class Platform():
         with open(f'Users/{str(self.chat_id)}/general.json', 'w') as f:
             json.dump({"timezone": self.timezone, "guest_name": self.guest_name}, f, indent=4, separators=(",", ": "))
 
-        bot.send_message(chati_id=self.chat_id,
+        bot.send_message(chat_id=self.chat_id,
                          text='Продолжая ползоваться ботом, вы принимаете условия пользовательского соглашения https://docs.google.com/document/d/1595oRSSZiy9RQ4pOTazH5-h-YtDtuBErfbykxeN3BWA/edit?usp=sharing')
 
         handle_command_adminwindow(msg)
@@ -99,7 +99,7 @@ class Platform():
         bot.send_message(chat_id=msg.chat.id,
                      text=f"Звонок пройдет в {self.time} {self.timezone}")
 
-        creationflags = subprocess.REALTIME_PRIORITY_CLASS
+        creationflags = subprocess.HIGH_PRIORITY_CLASS
         p = subprocess.run(['python', f'{self.platform}/main.py'], creationflags=creationflags)
     #</initiation>
 
