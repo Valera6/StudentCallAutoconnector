@@ -13,9 +13,10 @@ len_details = 2 #Number of elements in general.json
 
 #---------------------------------------------------------- 
 # initial definition
-def current_function(msg):
+def initial_function(msg):
     bot.send_message(chat_id=msg.chat.id,
-                     text='Не понимаю, что вы имеете ввиду')
+                     text='Не понимаю, что вы имеете ввиду. /start, /help')
+current_function = initial_function
 
 class Platform():
     # I want here a function of:
@@ -191,6 +192,8 @@ def ask_question(msg):
     print(f'DEBUG: asked a question')
     bot.send_message(chat_id=msg.chat.id,
                      text='Мы зарегистрировали ваш вопрос')
+    global current_function
+    current_function = initial_function
 @bot.message_handler(commands=['general'])
 def general_command(msg):
     bot.send_message(chat_id=msg.chat.id,
